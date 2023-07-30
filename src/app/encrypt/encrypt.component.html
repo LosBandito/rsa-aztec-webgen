@@ -1,0 +1,16 @@
+<p>encrypt works!</p>
+<script src="https://cdn.jsdelivr.net/npm/bwip-js@2.1.2/browser-min.js"></script>
+
+<button (click)="keygen()">generate keys</button>
+
+<button (click)="deleteCookies()">Delete keys</button>
+
+
+<button (click)="encrypt()">encrypt</button>
+
+<p>{{ message | json }}</p>
+
+
+<img [src]="barcodeImage" *ngIf="barcodeImage" />
+
+
