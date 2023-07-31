@@ -14,42 +14,46 @@ export class DecryptComponent {
   privateKey: string = '';
   decodedText: string = '';
   decryptedText: string = '';
-  onFileSelected(event: Event) {
-    const target = event.target as HTMLInputElement;
-    const files = target.files;
+    onFileSelected(event: Event) {
+      const target = event.target as HTMLInputElement;
+      const files = target.files;
 
-    if (files && files.length > 0) {
-      const file: File = files[0];
+      if (files && files.length > 0) {
+        const file: File = files[0];
 
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const base64Image = (e.target as FileReader).result;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const base64Image = (e.target as FileReader).result;
 
-        this.http.post<{text: string}>('http://localhost:5000/decodeAztec', {image: base64Image}).subscribe(response => {
-          this.decodedText = response.text;
-          this.decrypt(this.decodedText);
-        }, error => {
-          console.error('Error:', error);
-        });
+          this.http.post<{result: string}>('http://localhost:5000/decodeAztec', {image: base64Image}).subscribe(response => {
+            this.decodedText = response.result;  // here we use `result` as it's returned by the endpoint
+            this.decrypt(this.decodedText);
+          }, error => {
+            console.error('Error:', error);
+          });
+
+
+        };
+
+        reader.readAsDataURL(file);
+      }
+    }
+
+
+
+    decrypt(ciphertext: string) {
+      this.privateKey = this.cookieService.get('privateKey'); // Retrieve privateKey from cookies
+      const data = {
+        privateKey: this.cookieService.get('privateKey'),
+        ciphertext: ciphertext
       };
 
-      reader.readAsDataURL(file);
+      console.log(data);
+
+      this.http.post<{message: string}>('http://localhost:5000/decrypt', data).subscribe(response => {
+        this.decryptedText = response.message;
+      }, error => {
+        console.error('Decryption error:', error);
+      });
     }
-  }
-
-
-
-  decrypt(ciphertext: string) {
-    this.privateKey = this.cookieService.get('privateKey'); // Retrieve privateKey from cookies
-    const data = {
-      privateKey: this.privateKey,
-      ciphertext: ciphertext
-    };
-
-    this.http.post<{message: string}>('http://localhost:5000/decrypt', data).subscribe(response => {
-      this.decryptedText = response.message;
-    }, error => {
-      console.error('Decryption error:', error);
-    });
-  }
 }

@@ -12,7 +12,7 @@ import bwipjs from 'bwip-js';
 export class EncryptComponent {
   publicKey: string ='';
   privateKey: string = '';
-  barcodeImage: string= '';
+  barcodeImage: string | ArrayBuffer | null= '';
 
   message: any = '';
 
@@ -45,23 +45,27 @@ export class EncryptComponent {
     this.http.post(url, data).subscribe(response => {
       this.message = response;
       // Assuming that the response body has a `ciphertext` property.
-      this.createBarcode(this.message?.ciphertext);
+      this.generateBarcode(this.message?.ciphertext);
     }, error => {
       console.error('Error:', error);
     });
   }
 
-  createBarcode(text: string) {
-    const canvas = document.createElement('canvas');
-    bwipjs.toCanvas(canvas, {
-      bcid: 'azteccode',
-      text: text,
-      scale: 3,
+  generateBarcode(text: string) {
+    const url = 'http://127.0.0.1:5000/generate_aztec';
+    const data = { text: text };
+    this.http.post(url, data, { responseType: 'blob' }).subscribe(response => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        this.barcodeImage = reader.result;
+      };
+      if (response) {
+        reader.readAsDataURL(response);
+      }
+    }, error => {
+      console.error('Error:', error);
     });
-
-    this.barcodeImage = canvas.toDataURL();
   }
-
 
 
   deleteCookies() {
