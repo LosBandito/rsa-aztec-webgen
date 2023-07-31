@@ -1,13 +1,14 @@
 import base64
 import binascii
-
-import rsa
-from flask import Flask, request, jsonify
+import io
+from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 from rsa.key import PublicKey, PrivateKey
-from pyzbar.pyzbar import decode
+import rsa
+from aztec_code_generator import AztecCode
+from io import BytesIO
 from PIL import Image
-import io
+import zxing
 
 app = Flask(__name__)
 CORS(app)
@@ -43,9 +44,18 @@ def encrypt():
 
     return jsonify(ciphertext=ciphertext_hex), 200
 
-
+@app.route('/generate_aztec', methods=['POST'])
+def generate_aztec():
+    text = request.json.get('text')
+    if not text:
+        return jsonify(error="Text field is required"), 400
+    else:
+        aztec = AztecCode(text)
+        img_io = BytesIO()
+        aztec.save(img_io, format='PNG', module_size=4, border=1)
+        img_io.seek(0)
+        return send_file(img_io, mimetype='image/png')
 @app.route('/decrypt', methods=['POST'])
-
 def decrypt():
     private_key_pem = request.json.get('privateKey')
     ciphertext_hex = request.json.get('ciphertext')
@@ -67,34 +77,33 @@ def decrypt():
 
     return jsonify(message=message), 200
 
-
 @app.route('/decodeAztec', methods=['POST'])
 def aztec_decode():
     image_data = request.get_json()['image']
-
-    # Remove the prefix
     base64_image = image_data.split(",")[1]
 
     try:
-        # Convert the image data from base64
         image_bytes = base64.b64decode(base64_image)
-
-        # Open the image with PIL
         image = Image.open(io.BytesIO(image_bytes))
 
-        # TEMPORARY: Save the image to the disk
         with open('temp_image.png', 'wb') as temp_file:
             temp_file.write(image_bytes)
 
-        # Decode the Aztec code
-        decoded_objects = decode(image)
-        for obj in decoded_objects:
-            if obj.type == 'AZTEC':
-                return jsonify({'result': obj.data.decode()}), 200
+        # Create reader object
+        reader = zxing.BarCodeReader()
+
+        # Read barcode from image
+        barcode = reader.decode('temp_image.png')
+
+        # If barcode is not None, return the decoded text
+        if barcode is not None:
+            return jsonify({'result': barcode.raw}), 200
+
     except Exception as e:
         return jsonify({'error': str(e)}), 400
 
     return jsonify({'error': "No Aztec code found in image"}), 400
+
 
 if __name__ == '__main__':
     app.run(debug=True)
