@@ -54,6 +54,7 @@ export class DecryptComponent {
         this.decryptedText = response.message;
       }, error => {
         console.error('Decryption error:', error);
+        this.decryptedText = 'Decryption error,Try again';
       });
     }
 }

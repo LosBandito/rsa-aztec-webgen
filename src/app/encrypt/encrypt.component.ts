@@ -1,7 +1,8 @@
 import { Component } from '@angular/core';
 import {HttpClient} from "@angular/common/http";
 import { CookieService } from 'ngx-cookie-service';
-import bwipjs from 'bwip-js';
+
+
 
 
 @Component({
@@ -9,15 +10,28 @@ import bwipjs from 'bwip-js';
   templateUrl: './encrypt.component.html',
   styleUrls: ['./encrypt.component.css']
 })
+
+
+
 export class EncryptComponent {
+
+
+
   publicKey: string ='';
-  privateKey: string = '';
+  privateKey: string='';
   barcodeImage: string | ArrayBuffer | null= '';
 
   message: any = '';
 
   constructor(private http: HttpClient, private cookieService: CookieService) { }
 
+
+  ngOnInit(): void {
+    if (this.cookieService.check('publicKey')&& this.cookieService.check('privateKey')) {
+      this.publicKey = this.cookieService.get('publicKey');
+      this.privateKey = this.cookieService.get('privateKey');
+    }
+  }
   keygen() {
     this.http.get<{publicKey: string, privateKey: string}>('http://localhost:5000/keygen')
       .subscribe(
@@ -36,11 +50,25 @@ export class EncryptComponent {
   }
 
   encrypt() {
+
+
+
+    if (!this.message && this.message.length === 0) {
+      alert('Please enter a message')
+      return;
+    }
+    if (!this.cookieService.check('publicKey')&& !this.cookieService.check('privateKey')) {
+      alert('Please generate a key pair first')
+      return;
+    }
+
+
+
     const url = 'http://127.0.0.1:5000/encrypt';
     const publicKey = this.cookieService.get('publicKey');
     const data = {
       publicKey: publicKey,
-      message: 'Hello World'
+      message: this.message
     };
     this.http.post(url, data).subscribe(response => {
       this.message = response;
