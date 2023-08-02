@@ -44,6 +44,7 @@ def encrypt():
 
     return jsonify(ciphertext=ciphertext_hex), 200
 
+
 @app.route('/generate_aztec', methods=['POST'])
 def generate_aztec():
     text = request.json.get('text')
@@ -55,27 +56,7 @@ def generate_aztec():
         aztec.save(img_io, format='PNG', module_size=4, border=1)
         img_io.seek(0)
         return send_file(img_io, mimetype='image/png')
-@app.route('/decrypt', methods=['POST'])
-def decrypt():
-    private_key_pem = request.json.get('privateKey')
-    ciphertext_hex = request.json.get('ciphertext')
 
-    if not private_key_pem or not ciphertext_hex:
-        return jsonify(error="privateKey and ciphertext fields are required"), 400
-
-    try:
-        # Load the private key
-        private_key = PrivateKey.load_pkcs1(private_key_pem.encode())
-    except Exception as e:
-        return jsonify(error="Invalid private key format. " + str(e)), 400
-
-    try:
-        ciphertext = binascii.unhexlify(ciphertext_hex)
-        message = rsa.decrypt(ciphertext, private_key).decode('utf-8')
-    except Exception as e:
-        return jsonify(error="Decryption error: " + str(e)), 400
-
-    return jsonify(message=message), 200
 
 @app.route('/decodeAztec', methods=['POST'])
 def aztec_decode():
@@ -104,6 +85,28 @@ def aztec_decode():
 
     return jsonify({'error': "No Aztec code found in image"}), 400
 
+
+@app.route('/decrypt', methods=['POST'])
+def decrypt():
+    private_key_pem = request.json.get('privateKey')
+    ciphertext_hex = request.json.get('ciphertext')
+
+    if not private_key_pem or not ciphertext_hex:
+        return jsonify(error="privateKey and ciphertext fields are required"), 400
+
+    try:
+        # Load the private key
+        private_key = PrivateKey.load_pkcs1(private_key_pem.encode())
+    except Exception as e:
+        return jsonify(error="Invalid private key format. " + str(e)), 400
+
+    try:
+        ciphertext = binascii.unhexlify(ciphertext_hex)
+        message = rsa.decrypt(ciphertext, private_key).decode('utf-8')
+    except Exception as e:
+        return jsonify(error="Decryption error: " + str(e)), 400
+
+    return jsonify(message=message), 200
 
 if __name__ == '__main__':
     app.run(debug=True)
