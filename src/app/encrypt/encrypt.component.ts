@@ -1,7 +1,8 @@
 import { Component } from '@angular/core';
 import {HttpClient} from "@angular/common/http";
 import { CookieService } from 'ngx-cookie-service';
-
+import {Clipboard} from '@angular/cdk/clipboard';
+import { LoadingService } from './../loading.service/loading.service';
 
 
 
@@ -23,7 +24,7 @@ export class EncryptComponent {
 
   message: any = '';
 
-  constructor(private http: HttpClient, private cookieService: CookieService) { }
+  constructor(private http: HttpClient, private cookieService: CookieService,private clipboard: Clipboard,private loadingService: LoadingService) { }
 
 
   ngOnInit(): void {
@@ -33,6 +34,7 @@ export class EncryptComponent {
     }
   }
   keygen() {
+    this.loadingService.show();
     this.http.get<{publicKey: string, privateKey: string}>('http://localhost:5000/keygen')
       .subscribe(
         response => {
@@ -42,8 +44,10 @@ export class EncryptComponent {
           // Set cookies with 1 day of expiry
           this.cookieService.set('publicKey', this.publicKey, 1);
           this.cookieService.set('privateKey', this.privateKey, 1);
+          this.loadingService.hide()
         },
         error => {
+          this.loadingService.hide()
           console.log(error);
         }
       );
@@ -63,7 +67,7 @@ export class EncryptComponent {
     }
 
 
-
+    this.loadingService.show()
     const url = 'http://127.0.0.1:5000/encrypt';
     const publicKey = this.cookieService.get('publicKey');
     const data = {
@@ -74,9 +78,13 @@ export class EncryptComponent {
       this.message = response;
       // Assuming that the response body has a `ciphertext` property.
       this.generateBarcode(this.message?.ciphertext);
+      this.loadingService.hide()
     }, error => {
       console.error('Error:', error);
+      this.loadingService.hide()
     });
+
+    this.message = '';
   }
 
   generateBarcode(text: string) {
@@ -96,8 +104,41 @@ export class EncryptComponent {
   }
 
 
+  copyPrivate() {
+    const pending = this.clipboard.beginCopy(this.privateKey);
+    let remainingAttempts = 3;
+    const attempt = () => {
+      const result = pending.copy();
+      if (!result && --remainingAttempts) {
+        setTimeout(attempt);
+      } else {
+        // Remember to destroy when you're done!
+        pending.destroy();
+      }
+    };
+    attempt();
+  }
+
+  copyPublic() {
+    const pending = this.clipboard.beginCopy(this.privateKey);
+    let remainingAttempts = 3;
+    const attempt = () => {
+      const result = pending.copy();
+      if (!result && --remainingAttempts) {
+        setTimeout(attempt);
+      } else {
+        // Remember to destroy when you're done!
+        pending.destroy();
+      }
+    };
+    attempt();
+  }
   deleteCookies() {
+    this.loadingService.show()
     this.cookieService.delete('publicKey');
     this.cookieService.delete('privateKey');
+    this.publicKey = '';
+    this.privateKey = '';
+    this.loadingService.hide()
   }
 }
